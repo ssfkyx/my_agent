@@ -1,0 +1,106 @@
+Local Agent Harness — 启动 CLI 速查
+=====================================
+
+工作目录：仓库根目录
+Python：3.11+
+模型：main 和 embed 必选；sub / asr / vl 可选
+
+
+1. 最小 CLI 单轮
+----------------
+
+python3 -m agent \
+  --model main=/path/to/main.gguf \
+  --model embed=/path/to/embed.gguf \
+  --disable sub --disable asr --disable vl \
+  --once "介绍一下这个项目"
+
+
+2. 启动 TUI
+-----------
+
+python3 -m agent \
+  --model main=/path/to/main.gguf \
+  --model embed=/path/to/embed.gguf \
+  --disable sub --disable asr --disable vl \
+  --tui
+
+
+3. 启动 Web UI
+--------------
+
+python3 -m agent \
+  --model main=/path/to/main.gguf \
+  --model embed=/path/to/embed.gguf \
+  --disable sub --disable asr --disable vl \
+  --web
+
+默认地址：
+http://127.0.0.1:8765/
+
+
+4. 启用次脑
+-----------
+
+python3 -m agent \
+  --model main=/path/to/main.gguf \
+  --model sub=/path/to/sub.gguf \
+  --model embed=/path/to/embed.gguf \
+  --once "请评审并回答这个问题"
+
+
+5. 启用多模态
+-------------
+
+python3 -m agent \
+  --model main=/path/to/main.gguf \
+  --model embed=/path/to/embed.gguf \
+  --model asr=/path/to/asr.gguf \
+  --model vl=/path/to/vl.gguf \
+  --web
+
+ASR/VL 的 mmproj 必须写在配置文件的 [models.asr] / [models.vl] 中。
+--model 只覆盖 GGUF 路径，不会创建新的模型 profile。
+
+
+6. 使用自定义配置
+-----------------
+
+python3 -m agent \
+  --config /path/to/my.toml \
+  --once "使用自定义配置运行"
+
+
+7. 查看模型清单
+---------------
+
+python3 -m agent --list-models
+
+python3 -m agent --list-models --json
+
+--list-models 只读取配置并检查文件是否存在，不启动模型。
+
+
+8. 常用参数
+-----------
+
+--model ALIAS=PATH   覆盖已有模型的 GGUF 路径
+--model ALIAS=none   禁用可选模型
+--disable ALIAS      禁用可选模型
+--list-models        查看模型、角色、required/optional、文件是否存在
+--config PATH        使用指定 TOML 配置
+--once TEXT          单轮执行
+--tui                启动终端 TUI
+--web                启动 Web UI
+--json               以 JSON 输出最终信封
+--consent MODE       ask / allow / deny
+
+
+9. 双击启动
+-----------
+
+Windows：start.bat
+Linux：  start.sh
+macOS：  start.command
+
+双击默认执行 Web UI 并打开浏览器。
