@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# local deployment
+.env
+.env.*
+*.gguf
+*.mmproj
+
+# generated runtime state
+runs/
+artifacts/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,195 @@
+# defaults.toml — 部署配置（模型路径、端口、阈值）
+#
+# 关联：ADR-002（单常驻模型 / 端口独占）、ADR-006（TB-0 只用 main）
+# 说明：相对路径按进程 cwd 解析；密钥不写在这里（Handle_to_master 走环境变量）。
+
+[paths]
+# llama.cpp 服务端二进制（现场为 0.6.0-dev build 11574）
+llama_binary = "/home/cielo_1/llama.cpp/build/bin/llama-server"
+# 每个 turn 一个 JSONL 审计文件
+ledger_dir = "runs"
+# 每个模型的 llama-server 日志
+log_dir = "runs/server"
+# 进程级独占锁：抢不到即拒绝启动第二个模型
+lock_file = "runs/model.lock"
+
+[harness]
+# 主脑（planner/executor）：gemma4-v2-Q4_K_M，已通过 sha256 校验（ADR-008/ADR-033）。
+# Q6_K 在 12 GB 卡上 KV cache 分配 OOM；Q4 权重 6.9 GiB，4096 ctx 可全量上卡。
+# 若该文件再损坏，可临时改为 "llama31" 应急（ADR-007 的替换路径仍可用）。
+main_alias = "main"
+# 评审角色（次脑）：由 ModelRouter 在评审阶段切换过去（ADR-013/ADR-014）。
+review_alias = "sub"
+# 计划最多几个工具步骤（超出即截断并记 ERROR）
+max_steps = 4
+# 次脑 REVISE/FAIL 时最多打回主脑重做几轮（ADR-037）
+max_review_repairs = 2
+# 每次打回追加的工具步数；总步数 = max_steps + max_review_repairs * repair_step_bonus
+repair_step_bonus = 4
+# 采样温度：计划与答案都要稳定，低温度优先
+temperature = 0.2
+# 计划/答案的输出上限：统一 8192；必须同时满足 prompt + output <= n_ctx（ADR-012/ADR-035）
+max_tokens = 8192
+# 评审/反思的输出上限：统一 8192；schema 仍限制 issues/suggestions 条目与长度（ADR-019/ADR-035）
+review_max_tokens = 8192
+# 同一步骤失败后的最大尝试次数（含首次）；耗尽后询问是否升级（ADR-021）
+max_attempts = 3
+# 同一“意图 + 工具序列”出现多少轮视为无进展（ProgressWatch，ADR-021）
+escalation_rounds = 3
+# 单次模型调用超时（秒）；模型加载由 health_timeout_s 单独控制
+brain_timeout_s = 600.0
+# 等待 /health 变 ok 的上限（秒）；gemma4 Q6 冷加载约 10-30 s
+health_timeout_s = 240.0
+
+# 工作区：工具能看到的根目录、资源上限与写/执行策略（ADR-009/026）
+[workspace]
+# 相对路径按进程 cwd 解析；所有工具路径最终都被限制在这个根内
+root = "."
+# 单次 read_file 的字节上限（超出截断并在 data.truncated 标注）
+max_read_bytes = 65536
+# 单次 list_dir 的条目上限
+max_list_entries = 200
+# 写工具只能落在这个子目录（相对 workspace.root）；设为空字符串可禁用写工具
+write_root = "artifacts"
+# 单次 write_file 的 UTF-8 字节上限
+max_write_bytes = 65536
+# 命令执行白名单：argv 前缀，必须逐项匹配；空数组表示禁用 run_command
+command_allowlist = [
+  ["ls"],
+  ["wc"],
+  ["git", "status"],
+  ["git", "diff"],
+  ["python3", "--version"],
+]
+# 单次命令超时（秒）与单路输出上限（字节）
+command_timeout_s = 15.0
+max_command_output_bytes = 65536
+# run_command 隔离：bwrap=强制沙箱；auto=有 bwrap 就用；none=直接执行（ADR-028）
+command_sandbox = "auto"
+# 模型可自选的命令 profile；default 由上面的 command_allowlist 提供（ADR-031）。
+# 调用 workspace.run_command 时传 profile="git"/"python" 即可切换武器。
+[[workspace.command_profiles]]
+name = "git"
+allowlist = [
+  ["git", "status"],
+  ["git", "diff"],
+  ["git", "log"],
+  ["git", "show"],
+]
+[[workspace.command_profiles]]
+name = "python"
+allowlist = [
+  ["python3", "--version"],
+  ["python3", "-m", "compileall"],
+  ["python3", "-m", "unittest"],
+]
+
+# 工具护栏：命中即 DENIED_BY_GUARDRAIL，不执行、不消耗重试（ADR-009）
+[guardrail]
+deny_names = [".env", ".git", ".ssh", "id_rsa", "secrets.toml", "test_history", "Agents_opinion"]
+
+# 本地 Markdown 知识库（ADR-016/017）
+[knowledge]
+# SQLite 向量库（FP64 BLOB）；首次索引时自动建表
+db_path = "runs/knowledge.db"
+# 默认文档根（knowledge.index 的 path 若省略则用它；仍受 workspace 沙箱约束）
+docs_root = "docs"
+# 嵌入模型 alias：由 supervisor 拉起，与主脑互斥
+embed_alias = "embed"
+# 单 chunk 字符预算（标题前缀不计入）
+chunk_chars = 800
+# 默认检索条数
+top_k = 5
+# 向量 + BM25 的候选数（先 over-fetch，再按父块去重）
+candidate_k = 20
+# 父块文本上限；超长时保留命中 chunk 的邻近上下文
+parent_chars = 2400
+# dense + FTS5 BM25 混合检索
+hybrid = true
+# RRF 融合常数
+rrf_k = 60
+# 不作为知识检索的路径（fnmatch，相对 docs_root）；WORKLOG 是记录，不是知识
+exclude = ["WORKLOG.md", "Agents_opinion/*"]
+
+# 长期记忆与"改工具"请愿队列（ADR-018）
+[memory]
+# 反思记录（只追加，不重写）
+path = "runs/memory.jsonl"
+# 工具变更请求队列（只入队，不自动生效）
+requests_path = "runs/tool_requests.jsonl"
+# 每轮计划提示注入多少条历史 lesson
+recall_limit = 3
+
+# 媒体感知：语音转写与看图（ADR-020）
+[media]
+# 这两个 alias 必须配置 mmproj，否则 load() 直接报配置错误
+asr_alias = "asr"
+vl_alias = "vl"
+# 单文件上限（字节）；base64 后约为 1.34 倍，注意内存
+max_audio_bytes = 26214400
+max_image_bytes = 10485760
+
+# ---- 模型目录：5 个 alias，端口互不重复 ----
+# 禁止使用 8080/5117：宿主上已被其他服务占用；config.load 会直接拒绝。
+# n_gpu_layers = -1 表示先试 --fit on，失败后按阶梯降档（ADR-034）。
+# 显式值（如 99）会先试该层数，再按 99→32→28→24→20→16→12→8→4→0 降档。
+
+[models.main]
+gguf = "/home/cielo_1/models/gemma4-v2-Q4_K_M.gguf"
+port = 8090
+n_ctx = 8192
+# Q4 稠密 12B 共 48 层：先试全量 offload（99），失败按 32→28→24→20→16→12→8→4→0 降档（ADR-034）。
+n_gpu_layers = 99
+
+[models.sub]
+gguf = "/home/cielo_1/models/LFM2.5-8B-A1B-Q6_K.gguf"
+port = 8081
+n_ctx = 8192
+# 8B Q6 可以尝试全部 offload；失败仍会降档，不会一次判死。
+n_gpu_layers = 99
+
+[models.asr]
+gguf = "/home/cielo_1/models/Qwen3-ASR-1.7B-Q4_K_M.gguf"
+mmproj = "/home/cielo_1/models/mmproj-Qwen3-ASR-1.7B-Q4_K_M.gguf"
+port = 8082
+n_ctx = 4096
+n_gpu_layers = -1
+
+[models.embed]
+gguf = "/home/cielo_1/models/Qwen3-Embedding-0.6B-Q8_0.gguf"
+port = 8083
+n_ctx = 2048
+n_gpu_layers = -1
+embeddings = true
+
+[models.vl]
+gguf = "/home/cielo_1/models/Qwen3-VL-8B-Instruct-q6_k.gguf"
+mmproj = "/home/cielo_1/models/mmproj-Qwen3VL-8B-Instruct-Q8_0.gguf"
+port = 8084
+n_ctx = 4096
+n_gpu_layers = -1
+
+# 临时主脑（ADR-007）：gemma4-v2 GGUF 与当前 build 不兼容，先用 3.1-8B 把管线钉死。
+# 它的上下文更短（131k 但显存有限），TB-0 的 prompt 很短，4096 足够。
+[models.llama31]
+gguf = "/home/cielo_1/models/Meta-Llama-3.1-8B-Instruct-Q8_0.gguf"
+port = 8085
+n_ctx = 4096
+n_gpu_layers = -1
+
+# ---- 场外升级（Handle_to_master，ADR-021）----
+# 端点/密钥/模型名只从环境变量读取，默认不配置；未配置时升级路径会明确失败，
+# 但本地答案仍照常交付。变量名：
+#   HANDLE_TO_MASTER_BASE_URL / HANDLE_TO_MASTER_API_KEY / HANDLE_TO_MASTER_MODEL
+# 绝不要把地址或密钥写进本文件（避免进版本库/被 RAG 索引）。
+
+# ---- Web UI（ADR-027）----
+# 默认只绑定回环地址；不要在没有认证/反向代理保护时改成 0.0.0.0。
+[web]
+host = "127.0.0.1"
+port = 8765
+# Bearer token 从这个环境变量读取；留空字符串表示不启用认证（仅建议回环使用）。
+auth_token_env = "AGENT_WEB_TOKEN"
+# TLS 证书/私钥绝对路径；两者必须同时配置，留空表示 HTTP。
+tls_cert = ""
+tls_key = ""

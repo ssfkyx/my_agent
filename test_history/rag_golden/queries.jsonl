@@ -1,0 +1,12 @@
+{"id":"process-steps","query":"如果我想做软件开发，该有哪些步骤？","expected_docs":["software-development-process.md"],"expected_headings":["1. 需求澄清","2. 方案设计","3. 任务拆分","4. 实现","5. 验证","6. 评审","7. 发布","8. 观察与复盘"],"answerable":true}
+{"id":"process-dod","query":"软件开发流程的最小完成标准是什么？","expected_docs":["software-development-process.md"],"expected_headings":["最小完成标准（DoD）"],"answerable":true}
+{"id":"adr-034","query":"ADR-034 的 ngl 降档重试策略是什么？","expected_docs":["decisions/ADR-034-ngl-ladder-retry.md"],"expected_headings":["决策"],"answerable":true}
+{"id":"adr-035","query":"token 预算为什么改成 8192？","expected_docs":["decisions/ADR-035-token-budget-8192.md"],"expected_headings":["决策"],"answerable":true}
+{"id":"adr-037","query":"评审 REVISE 之后 agent 会怎么重做？","expected_docs":["decisions/ADR-037-review-gate-evidence-dynamic-steps.md"],"expected_headings":["决策"],"answerable":true}
+{"id":"adr-036","query":"Web 窗口的多模态附件上传怎么工作？","expected_docs":["decisions/ADR-036-web-multimodal-upload.md"],"expected_headings":["决策"],"answerable":true}
+{"id":"adr-033","query":"主脑为什么从 Q6 换成 Q4_K_M？","expected_docs":["decisions/ADR-033-main-model-q4-k-m.md"],"expected_headings":["决策"],"answerable":true}
+{"id":"adr-028","query":"bwrap 命令沙箱如何限制文件访问？","expected_docs":["decisions/ADR-028-bwrap-command-sandbox.md"],"expected_headings":["决策"],"answerable":true}
+{"id":"adr-002","query":"为什么同一时间只能常驻一个模型？","expected_docs":["decisions/ADR-002-single-resident-model-lock.md"],"expected_headings":["决策"],"answerable":true}
+{"id":"adr-016","query":"本地 Markdown 知识库怎么做分块和检索？","expected_docs":["decisions/ADR-016-rag-local-markdown.md"],"expected_headings":["决策"],"answerable":true}
+{"id":"reindex","query":"如何重建知识库索引？","expected_docs":["decisions/ADR-038-parent-hybrid-rag.md","pre_architecture.md","decisions/ADR-016-rag-local-markdown.md"],"expected_headings":[],"answerable":true}
+{"id":"no-answer-k8s","query":"我们的 Kubernetes 集群叫什么名字？","expected_docs":[],"expected_headings":[],"answerable":false}
