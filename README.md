@@ -1,8 +1,8 @@
 # Local Agent Harness
 
-> 这是一个可人工演进、主脑可提改进方向、次脑可选把关、可选多模态、带本地 RAG 和完整审计的单机 agent harness；它不是“主脑自己改代码”的自演进系统，也不是联网搜索型 RAG。
+> 这是一个可人工演进、主脑可提改进方向、次脑可选把关、可选多模态、带本地 RAG 和完整审计的单机 agent harness；
 
-一个基于本地 `llama.cpp` 的 agent harness。模型不随仓库分发，需要在本机提供 GGUF。
+**基于本地 `llama.cpp` .模型需要在本机提供 GGUF。参考必选模型和可选模型。
 
 ## 特性
 
